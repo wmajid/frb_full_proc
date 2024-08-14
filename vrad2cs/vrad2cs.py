@@ -11,7 +11,6 @@ from astropy.time import Time, TimeDelta
 import multiprocessing as mp
 import re
 
-
 cur_dir = os.path.realpath(__file__)
 srcdir  = cur_dir.rsplit('/', 1)[0]
 
@@ -341,10 +340,13 @@ def vrad_2_cs(inf_file, scanno, vrad_dir, vrad_base, out_dir,
     elif freq_band == "x":
         band_info = []
         for vdr_file in vdr_infiles:
-            band_num = int(re.search(r'-00(\d+)', vdr_file).group(1))
+            # wam
+            #band_num = int(re.search(r'-00(\d+)', vdr_file).group(1))
+            band_num = int(re.search(r'0001-(\d+)', vdr_file).group(1))
             subband = "x" + str(band_num)
             x_freq_sb = freq_dct[subband]
             x_bw_sb = bw_dct[freq_band]
+            print(">>wam>> vdr_file = %s  band_num %d  x_freq_sb = %s" % (vdr_file, band_num, x_freq_sb))
             # associate each file with freq and bw for its 
             # value (1, 2, 3, 4)
             band_info.append((vdr_file, x_freq_sb, x_bw_sb, band_num))
