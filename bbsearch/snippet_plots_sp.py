@@ -371,6 +371,221 @@ def make_plot(filfile, dm, favg=1, tavg=1, spec_sig=5,
 
     return
 
+# wam
+def make_plot2(filfile, dm, favg=1, tavg=1, spec_sig=5,
+              outbins=128, outfile=None, cnum=None, 
+              ctime=None, cdm=None, cwidth=None, 
+              csnr=None, bpass=True, bpfile=None, zstr=""):
+    """
+    make 6 panel plot
+    """
+    if outfile is not None:
+        plt.ioff()
+    else: pass
+
+    #tt, freqs, dat = get_snippet_data(filfile, dm,
+    #                         favg=favg, tavg=tavg, bpass=True)
+    tt, freqs, dat = get_snippet_data2(filfile, dm,
+                             favg=favg, tavg=tavg, bpass=bpass,
+                             bpfile=bpfile, zapstr=zstr)
+    tt *= 1e3
+    #tt0, _, dat0 = get_snippet_data(filfile, 0,
+    #                         favg=favg, tavg=tavg, bpass=True)
+    #tt0 *= 1e3
+
+    # Set tlim if desired
+    if outbins > 0:
+        Nt = len(tt)
+        xt_lo = max( 0, Nt//2 - outbins//2)
+        xt_hi = min( Nt-1, Nt//2 + outbins//2)
+        tlim = (tt[xt_lo], tt[xt_hi])
+    else:
+        tlim = (tt[0], tt[-1])
+
+    fig = plt.figure(figsize=(10,10), constrained_layout=True)
+    #fig = plt.figure(constrained_layout=True)
+    gs = GridSpec(6, 3, figure=fig)
+
+    ax_t  = fig.add_subplot(gs[0, 0:2])
+    ax_ds = fig.add_subplot(gs[1:3, 0:2])
+    ax_f  = fig.add_subplot(gs[1:3, 2])
+    ax_txt = fig.add_subplot(gs[0, 2])
+
+    # Dynamic Spectrum
+    ext = [tt[0], tt[-1], freqs[0], freqs[-1]]
+    d_sig = np.std(dat)
+    d_med = np.median(dat)
+    vmax = d_med + 4 * d_sig
+    vmin = d_med - 3 * d_sig
+    ax_ds.imshow(dat.T, aspect='auto', interpolation='nearest',
+                 origin='lower', extent=ext, vmin=vmin, vmax=vmax)
+    ax_ds.set_xlabel("Time (ms)", fontsize=14)
+    ax_ds.set_ylabel("Freq (MHz)", fontsize=14)
+    ax_ds.set_xlim(tlim)
+
+    # Time series
+    ts = np.mean(dat, axis=1)
+    Nthird = len(ts) // 3
+    avg = np.mean(ts[:Nthird])
+    sig = np.std(ts[:Nthird])
+    ts = (ts-avg)/sig
+
+    # wam
+    ts_max = np.max(ts)
+    
+    #ts0 = np.mean(dat0, axis=1)
+    #ts0 = (ts0-avg)/sig
+    #ax_t.plot(tt0, ts0, c='0.5', zorder=-1)
+
+    ax_t.plot(tt, ts)
+    ax_t.tick_params(axis='x', labelbottom=False)
+    tylim = ax_t.get_ylim()
+    #ax_t.set_xlim(tt[0], tt[-1])
+    ax_t.set_xlim(tlim)
+
+    # Spectrum
+    xpk = np.argmax(ts)
+    #xx_below = np.where( ts <= 0.1*np.max(ts) )[0]
+    #xx_lo = np.max(xx_below[xx_below <= xpk ])
+    #xx_hi = np.min(xx_below[xx_below >= xpk ])
+    xx_lo = int( len(ts) // 2 ) - 2
+    xx_hi = int( len(ts) // 2 ) + 2
+
+    off_spec = np.mean(dat[:Nthird], axis=0)
+    off_sig = np.std(off_spec)
+    off_sig = off_sig * np.sqrt(Nthird/(xx_hi-xx_lo))
+
+    spec = np.mean(dat[xx_lo:xx_hi], axis=0) / off_sig
+    ax_f.plot(spec, freqs)
+    ax_f.set_ylim(freqs[0], freqs[-1])
+    ax_f.tick_params(axis='y', labelleft=False)
+
+    # Shade region used for spec
+    tlo = tt[xx_lo]
+    thi = tt[xx_hi]
+    ax_t.fill_betweenx([-10, 100], tlo, thi, color='r', alpha=0.1)
+    #print(tlo, thi)
+    ax_t.set_ylim(tylim)
+
+    # Add cand info subplot
+    ax_txt.axis('off')
+    outstr = ""
+    if cnum is not None:
+        outstr += "Cand: %d\n" %cnum
+    if ctime is not None:
+        outstr += "Time: %.3f s\n" %ctime
+    if cdm is not None:
+        outstr += "DM: %.2f\n" %cdm
+    if cwidth is not None:
+        outstr += "Width: %d bins\n" %cwidth
+    if csnr is not None:
+        outstr += "SNR: %.1f\n" %csnr
+    if ts_max is not None:
+        outstr += "MAX: %.1f\n" %ts_max
+    ax_txt.text(0.00, 0.9, outstr, fontsize=10, ha='left', va='top',
+                transform=ax_txt.transAxes)
+
+    #####
+    # 0 DM plots
+    #####
+
+    dm=0
+    tt, freqs, dat = get_snippet_data2(filfile, dm,
+                             favg=favg, tavg=tavg, bpass=bpass,
+                             bpfile=bpfile, zapstr=zstr)
+    tt *= 1e3
+
+    
+    ax_t  = fig.add_subplot(gs[3, 0:2])
+    ax_ds = fig.add_subplot(gs[4:, 0:2])
+    ax_f  = fig.add_subplot(gs[4:, 2])
+    ax_txt = fig.add_subplot(gs[3, 2])
+
+    # Dynamic Spectrum
+    ext = [tt[0], tt[-1], freqs[0], freqs[-1]]
+    d_sig = np.std(dat)
+    d_med = np.median(dat)
+    vmax = d_med + 4 * d_sig
+    vmin = d_med - 3 * d_sig
+    ax_ds.imshow(dat.T, aspect='auto', interpolation='nearest',
+                 origin='lower', extent=ext, vmin=vmin, vmax=vmax)
+    ax_ds.set_xlabel("Time (ms)", fontsize=14)
+    ax_ds.set_ylabel("Freq (MHz)", fontsize=14)
+    ax_ds.set_xlim(tlim)
+
+    # Time series
+    ts = np.mean(dat, axis=1)
+    Nthird = len(ts) // 3
+    avg = np.mean(ts[:Nthird])
+    sig = np.std(ts[:Nthird])
+    ts = (ts-avg)/sig
+
+    # wam
+    ts_max = np.max(ts)
+
+    #ts0 = np.mean(dat0, axis=1)
+    #ts0 = (ts0-avg)/sig
+    #ax_t.plot(tt0, ts0, c='0.5', zorder=-1)
+
+    ax_t.plot(tt, ts)
+    ax_t.tick_params(axis='x', labelbottom=False)
+    tylim = ax_t.get_ylim()
+    #ax_t.set_xlim(tt[0], tt[-1])
+    ax_t.set_xlim(tlim)
+
+    # Spectrum
+    xpk = np.argmax(ts)
+    #xx_below = np.where( ts <= 0.1*np.max(ts) )[0]
+    #xx_lo = np.max(xx_below[xx_below <= xpk ])
+    #xx_hi = np.min(xx_below[xx_below >= xpk ])
+    xx_lo = int( len(ts) // 2 ) - 2
+    xx_hi = int( len(ts) // 2 ) + 2
+
+    off_spec = np.mean(dat[:Nthird], axis=0)
+    off_sig = np.std(off_spec)
+    off_sig = off_sig * np.sqrt(Nthird/(xx_hi-xx_lo))
+
+    spec = np.mean(dat[xx_lo:xx_hi], axis=0) / off_sig
+    ax_f.plot(spec, freqs)
+    ax_f.set_ylim(freqs[0], freqs[-1])
+    ax_f.tick_params(axis='y', labelleft=False)
+
+    # Shade region used for spec
+    tlo = tt[xx_lo]
+    thi = tt[xx_hi]
+    ax_t.fill_betweenx([-10, 100], tlo, thi, color='r', alpha=0.1)
+    #print(tlo, thi)
+    ax_t.set_ylim(tylim)
+
+    # Add cand info subplot
+    ax_txt.axis('off')
+    outstr = ""
+    if cnum is not None:
+        outstr += "Cand: %d\n" %cnum
+    if ctime is not None:
+        outstr += "Time: %.3f s\n" %ctime
+    if cdm is not None:
+        outstr += "DM: %.2f\n" %cdm
+    if cwidth is not None:
+        outstr += "Width: %d bins\n" %cwidth
+    if csnr is not None:
+        outstr += "SNR: %.1f\n" %csnr
+    if ts_max is not None:
+        outstr += "MAX: %.1f\n" %ts_max
+    ax_txt.text(0.00, 0.9, outstr, fontsize=10, ha='left', va='top',
+                transform=ax_txt.transAxes)
+
+
+    
+    if outfile is not None:
+        plt.savefig(outfile, dpi=100, bbox_inches='tight')
+        plt.close()
+        plt.ion()
+    else:
+        plt.show()
+
+    return
+
 #########################
 ##  Remove Duplicates  ##
 #########################
@@ -679,7 +894,7 @@ def make_snippet_plots(sp, fildir, basename, outdir='.',
 
         outfile = "%s/cand%04d.png" %(outdir, cnum)
 
-        make_plot(infile, cc.dm, favg=f_dec, tavg=t_dec_fac, 
+        make_plot2(infile, cc.dm, favg=f_dec, tavg=t_dec_fac, 
                    cnum=cnum, ctime=cc.time, cdm=cc.dm, 
                    cwidth=cc.wbins, csnr=cc.snr, outbins=outbins, 
                    outfile=outfile, bpass=bpass, bpfile=bpfile, 
