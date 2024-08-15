@@ -264,11 +264,19 @@ def sp_search(datfile, snr, bb=False, maxwidth=1.0, dtrendlen=8):
     datbase = datfile.split(".dat")[0]
     spfile = "%s.singlepulse" %datbase
 
+    # wam: this logic was reversed; in fact, we are always running with bad blocks options
     if bb:
         b_str = ""
     else:
         b_str = "-b "
 
+    """
+    if bb:
+        b_str = ""
+    else:
+        b_str = "-b "
+    """
+    
     sp_cmd = "python -u %s/single_pulse_search_w16ms.py " %scriptdir +\
              "-t %.2f " %snr +\
              "-m %.4f " %maxwidth +\
